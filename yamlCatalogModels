@@ -1,0 +1,40 @@
+
+import Foundation
+
+struct YAMLCatalog {
+    let date: String
+    let shop: Shop
+}
+
+struct Shop {
+    let name: String
+    let company: String
+    let url: String
+    let platform: String
+    let currencies: [Currency]
+    let categories: [Category]
+    let offers: [Offer]
+}
+
+struct Currency {
+    let id: String
+    let rate: Double
+}
+
+struct Category {
+    let id: Int
+    let parentId: Int?
+    let name: String
+}
+
+struct Offer {
+    let id: Int
+    let available: Bool
+    let url: String
+    let price: Double
+    let currencyId: String
+    let categoryId: Int
+    let pictureURL: String
+    let name: String
+    let description: String
+}
