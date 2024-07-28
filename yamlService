@@ -13,18 +13,21 @@ class YAMLService {
 
 extension YAMLService {
     func yamlParses() -> YAMLcatalog? {
-        guard let url = Bundle.main.url(forResource: "fileName", withExtension: "xml") else { return nil }
+        guard let url = Bundle.main.url(forResource: "fileName", withExtension: "xml") else { 
+            logger.error("url error")
+            return nil 
+        }
         do {
             let data = try Data(contentsOf: url)
             let parser = YAMLParser(data: data)
             if parser.parse() {
                 return parser.yamlCatalog
             } else {
-                print("NSXML Parsing error")
+                logger.error("NSXML Parsing error")
                 return nil
             }
         } catch {
-            print("Data read error:\(error.localizedDescription)")
+            logger.error("Data read error:\(error.localizedDescription)")
             return nil
         }
     }
