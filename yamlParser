@@ -1,0 +1,156 @@
+import Foundation
+
+class YAMLParser: XMLParser {
+    lazy var yamlCatalog = YAMLcatalog(date: "", shop: currentShop)
+    private lazy var currentYAMLCatalogDate = ""
+    private lazy var currentelementName: String? = nil
+    private lazy var currentShop = Shop(name: "",
+                                        company: "",
+                                        url: "",
+                                        platform: "",
+                                        currencies: [],
+                                        categories: [],
+                                        offers: [])
+    private lazy var currentShopName = ""
+    private lazy var currentShopCompany = ""
+    private lazy var currentShopURL = ""
+    private lazy var currentShopPlatform = ""
+    private lazy var currencies: [Currency] = []
+    private lazy var currentCategoryId = ""
+    private lazy var currentCategoryParentId = ""
+    private lazy var currentCategoryName = ""
+    private lazy var categories: [Category] = []
+    private lazy var currentOfferId = 0
+    private lazy var currentOfferAvailable = false
+    private lazy var currentOfferURL = ""
+    private lazy var currentOfferPrice = ""
+    private lazy var currentOfferCurrencyId = ""
+    private lazy var currentOfferCategoryId = 0
+    private lazy var currentOfferPictureURL = ""
+    private lazy var currentOfferName = ""
+    private lazy var currentOfferDescription = ""
+    private lazy var offers: [Offer] = []
+
+    override init(data: Data) {
+        super.init(data: data)
+        self.delegate = self
+    }
+}
+
+extension YAMLParser: XMLParserDelegate {
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
+        self.currentelementName = elementName
+        switch elementName {
+        case "yml_catalog":
+            guard let ymlCatalogDate = attributeDict["date"] else { return }
+            currentYAMLCatalogDate = ymlCatalogDate
+        case "currency":
+            guard let currencyId = attributeDict["id"],
+                  let currencyRate = attributeDict["rate"],
+                  let currencyRateDouble = Double(currencyRate) else { return }
+            currencies.append(Currency(id: currencyId, rate: currencyRateDouble))
+        case "category":
+            guard let categoryId = attributeDict["id"] else { return }
+            currentCategoryId = categoryId
+            currentCategoryParentId = attributeDict["parentId"] ?? ""
+        case "offer":
+            guard let offerIdString = attributeDict["id"],
+                  let offerAvailableString = attributeDict["available"],
+                  let offerId = Int(offerIdString),
+                  let offerAvailable = Bool(offerAvailableString) else { return }
+            currentOfferId = offerId
+            currentOfferAvailable = offerAvailable
+        default:
+            break
+        }
+    }
+
+    func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
+        switch elementName {
+        case "shop":
+            currentShop = Shop(name: currentShopName,
+                               company: currentShopCompany,
+                               url: currentShopURL,
+                               platform: currentShopPlatform,
+                               currencies: currencies,
+                               categories: categories,
+                               offers: offers)
+        case "yml_catalog":
+            yamlCatalog = YAMLcatalog(date: currentYAMLCatalogDate, shop: currentShop)
+        case "category":
+            guard let categoryId = Int(currentCategoryId) else { return }
+            categories.append(Category(id: categoryId,
+                                       parentId: Int(currentCategoryParentId),
+                                       name: currentCategoryName))
+            currentCategoryName = ""
+        case "offer":
+            guard let offerPrice = Double(currentOfferPrice) else { return }
+            offers.append(Offer(id: currentOfferId,
+                                available: currentOfferAvailable,
+                                url: currentOfferURL,
+                                price: offerPrice,
+                                currencyId: currentOfferCurrencyId,
+                                categoryId: currentOfferCategoryId,
+                                pictureURL: currentOfferPictureURL,
+                                name: currentOfferName,
+                                description: currentOfferDescription))
+            currentOfferURL = ""
+            currentOfferPrice = ""
+            currentOfferCurrencyId = ""
+            currentOfferCategoryId = 0
+            currentOfferPictureURL = ""
+            currentOfferName = ""
+            currentOfferDescription = ""
+        default:
+            break
+        }
+        currentelementName = nil
+    }
+
+    func parser(_ parser: XMLParser, foundCharacters string: String) {
+        currentOfferId == 0 ? notOfferParse(string: string) : offerParse(string: string)
+    }
+
+    func offerParse(string: String) {
+        switch currentelementName {
+        case "url":
+            currentOfferURL += string
+        case "price":
+            currentOfferPrice += string
+        case "currencyId":
+            currentOfferCurrencyId += string
+        case "categoryId":
+            guard let offerCategoryId = Int(string) else { return }
+            currentOfferCategoryId = offerCategoryId
+        case "picture":
+            currentOfferPictureURL += string
+        case "name":
+            currentOfferName += string
+        case "description":
+            currentOfferDescription += string
+        default:
+            break
+        }
+    }
+
+    func notOfferParse(string: String) {
+        switch currentelementName {
+        case "name":
+            currentShopName += string
+        case "company":
+            currentShopCompany += string
+        case "url":
+            currentShopURL += string
+        case "platform":
+            currentShopPlatform += string
+        case "category":
+            currentCategoryName += string
+        default:
+            break
+        }
+    }
+
+    func parser(_ parser: XMLParser, parseErrorOccurred parseError: any Error) {
+        print(parseError.localizedDescription)
+    }
+}
